@@ -75,6 +75,7 @@ namespace SlugBase
 
                     SlugBaseCharacter.Registry.WatchForChanges = true;
                     CustomScene.Registry.WatchForChanges = true;
+                    CustomSlideshow.Registry.WatchForChanges = true;
                 }
                 catch(Exception e)
                 {
@@ -95,12 +96,14 @@ namespace SlugBase
         {
             SlugBaseCharacter.Registry.ScanDirectory("slugbase");
             CustomScene.Registry.ScanDirectory("slugbase/scenes");
+            CustomSlideshow.Registry.ScanDirectory("slugbase/slideshows");
         }
 
         public void Update()
         {
             SlugBaseCharacter.Registry.ReloadChangedFiles();
             CustomScene.Registry.ReloadChangedFiles();
+            CustomSlideshow.Registry.ReloadChangedFiles();
         }
     }
 }
