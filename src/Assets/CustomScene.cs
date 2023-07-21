@@ -12,19 +12,25 @@ namespace SlugBase.Assets
     /// A scene added by SlugBase.
     /// </summary>
     public class CustomScene
-    {
-        /// <summary>
-        /// The ID of the next custom dream to play, as a string
-        /// </summary>
-        public static string nextDreamID { get; private set; } = "";
-        
+    {        
         /// <summary>
         /// Set the dream scene that will display when the player hibernates next.
         /// </summary>
         /// <param name="name">The id of the scene to display.</param>
         public static void QueueDream(string name)
         {
-            nextDreamID = name;
+            if (RWCustom.Custom.rainWorld.processManager.currentMainLoop is RainWorldGame rainGame && CustomScene.Registry.TryGet(new(name), out var customScene))
+            {
+                rainGame.GetStorySession.saveState.dreamsState.InitiateEventDream(new (name));
+            }
+            else if (RWCustom.Custom.rainWorld.processManager.currentMainLoop is not RainWorldGame)
+            {
+                Debug.LogError("Slugbase dream set fail, curentMainLoop is not a RainWorldGame!");
+            }
+            else if (!CustomScene.Registry.TryGet(new(name), out var scene))
+            {
+                Debug.LogError("Slugbase dream set fail, could not find matching scene");
+            }
         }
 
         /// <summary>
@@ -76,7 +82,12 @@ namespace SlugBase.Assets
         /// </summary>
         public float? SlugcatDepth { get; }
 
-        private CustomScene(SceneID id, JsonObject json)
+        /// <summary>
+        /// If a scene is used as a Dream, should it replace any current dream
+        /// </summary>
+        public bool OverrideDream { get; }
+
+        internal CustomScene(SceneID id, JsonObject json)
         {
             ID = id;
 
@@ -84,6 +95,7 @@ namespace SlugBase.Assets
                 .Select(img => new Image(img.AsObject()))
                 .ToArray();
 
+            if (this is not SlugBase.Assets.CustomSlideshow.CustomSlideshowScene)
             IdleDepths = json.GetList("idle_depths")
                 .Select(depth => depth.AsFloat())
                 .ToArray();
@@ -100,6 +112,8 @@ namespace SlugBase.Assets
                 SelectMenuOffset = ToVector2(selectMenuPos);
 
             SlugcatDepth = json.TryGet("slugcat_depth")?.AsFloat();
+
+            OverrideDream = json.TryGet("dream_override")?.AsBool() ?? true;
         }
 
         /// <summary>
