@@ -242,6 +242,12 @@ Ex: `"has_dreams": true`
 
 Whether this character has a dream state.
 
+### "use_default_dreams"
+`boolean`\
+Ex: `"use_default_dreams": false`
+
+Whether this character uses Survivor's dreams. This defaults to `true`.
+
 ### "cycle_length_min"
 `float`\
 Ex: `"cycle_length_min": 5.5`
@@ -303,14 +309,14 @@ Ex: `"death_scene": "MySlugcatDeath"`
 Scene ID for non-starvation deaths.
 
 ### "intro_slideshow"
-`string`/
-Ex: `"intro_slideshow": "scholar_intro"`
+`string`\
+Ex: `"intro_slideshow": "Scholar_Intro"`
 
 Slideshow ID to use for the intro slideshow when starting a campaign for the first time.
 
 ### "outro_slideshow"
 `string`\
-Ex: `"outro_slideshow": "scholar_outro"`
+Ex: `"outro_slideshow": "Scholar_Outro"`
 
 Slideshow ID to use for the void sea slideshow.
 

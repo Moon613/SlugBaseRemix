@@ -2,7 +2,6 @@
 using SlideShowID = Menu.SlideShow.SlideShowID;
 using System.Linq;
 using System.IO;
-using static SlugBase.JsonUtils;
 using static Menu.MenuScene;
 using System;
 using SlugBase.SaveData;
@@ -14,25 +13,6 @@ namespace SlugBase.Assets
     /// </summary>
     public class CustomSlideshow
     {
-        /// <summary>
-        /// Must match the ID to the id in a slideshow's json file, and provide the ProcessManager, in order to play an outro slideshow
-        /// </summary>
-        /// <param name="ID">The ID of the slideshow to play, should be declared as a new Menu.SlideShow.SlideShowID(string, false) with the string matching the id of a slugbase slideshow .json file.</param>
-        /// <param name="manager">The ProcessManager, needed to change the active process.</param>
-        /// <param name="fadeOutSeconds">The time taken to fade to black.</param>
-        /// <param name="newMenuSelectScene">The new scene to display on the charact select screen.</param>
-        public static void NewOutro(ProcessManager manager, string ID, string newMenuSelectScene = null, float fadeOutSeconds = 0.45f)
-        {
-            manager.nextSlideshow = new (ID);
-            if (newMenuSelectScene != null && manager.currentMainLoop is RainWorldGame rainGame)
-            {
-                manager.rainWorld.progression.miscProgressionData.GetSlugBaseData().Set($"menu_select_scene_alt_{rainGame.StoryCharacter.value}", newMenuSelectScene);
-                rainGame.GetStorySession.saveState.SessionEnded(rainGame, true, manager.rainWorld.progression.currentSaveState.malnourished);
-            }
-            //manager.rainWorld.progression.SaveWorldStateAndProgression(manager.rainWorld.progression.currentSaveState.malnourished);
-            manager.RequestMainProcessSwitch(ProcessManager.ProcessID.SlideShow, fadeOutSeconds);
-        }
-
         /// <summary>
         /// Stores all registered <see cref="CustomSlideshow"/>s.
         /// </summary>
@@ -79,75 +59,92 @@ namespace SlugBase.Assets
             Process = new ProcessManager.ProcessID(json.GetString("next_process"));
         }
 
+        internal CustomSlideshowScene GetScene(SceneID id)
+        {
+            return Scenes.FirstOrDefault(scene => scene.ID == id);
+        }
+
         /// <summary>
-        /// A scene from a <see cref="CustomSlideshow"/> that holds data about when to appear and what images to use for what amount of time
+        /// A scene from a <see cref="CustomSlideshow"/> that holds data about when to appear and what images to use for what amount of time.
         /// </summary>
         public class CustomSlideshowScene : CustomScene
         {
-
             /// <summary>
-            /// The second that this scene will start fading in, in seconds
+            /// The time that this scene will start fading in, in seconds.
             /// </summary>
             public float StartAt { get; set; }
 
             /// <summary>
-            /// The second that this image will finish fading in, in seconds
+            /// The time that this image will finish fading in, in seconds.
             /// </summary>
             public float FadeInDoneAt { get; set; }
 
             /// <summary>
-            /// The second that this image will start fading out at, in seconds
+            /// The time that this image will start fading out at, in seconds.
             /// </summary>
             public float FadeOutStartAt { get; set; }
 
             /// <summary>
-            /// The positions that the images will try to go to, if they are not in flatMode (Determined by the game)
+            /// The positions that the camera will focus on when playing this scene.
             /// </summary>
-            public Vector2[] Movement { get; set; }
+            /// <remarks>
+            /// X and Y represent the pixel position of the camera, while Z represents the focus depth.
+            /// </remarks>
+            public Vector3[] CameraMovement { get; set; }
 
             /// <summary>
             /// Creates a new Scene from JSON.
             /// </summary>
             /// <param name="json">The JSON data to load from.</param>
-            public CustomSlideshowScene (JsonObject json) : base(new Menu.MenuScene.SceneID(json.GetString("name"), false), json)
+            public CustomSlideshowScene(JsonObject json) : base(new SceneID(json.GetString("name"), false), json)
             {
-                StartAt = json.TryGet("fade_in")?.AsFloat() ?? 0;
-                FadeInDoneAt = json.TryGet("fade_in_finish")?.AsFloat() ?? 3;
-                FadeOutStartAt = json.TryGet("fade_out_start")?.AsFloat() ?? 8;
-                Movement = json.TryGet("movements")?.AsList().Select(vec => ToVector2(vec)).ToArray() ?? new Vector2[1]{new(0,0)};
+                StartAt = json.GetFloat("fade_in_start");
+                FadeInDoneAt = json.TryGet("fade_in_end")?.AsFloat() ?? (StartAt + 1f);
+                FadeOutStartAt = json.GetFloat("fade_out_start");
+
+                if(json.TryGet("camera_path")?.AsList() is JsonList movementList)
+                {
+                    CameraMovement = new Vector3[movementList.Count];
+                    for(int i = 0; i < CameraMovement.Length; i++)
+                    {
+                        var vecList = movementList.GetList(i);
+                        CameraMovement[i] = new Vector3(
+                            vecList.GetFloat(0),
+                            vecList.GetFloat(1),
+                            vecList.TryGet(2)?.AsFloat() ?? -1f
+                        );
+                    }
+                }
+                else
+                {
+                    CameraMovement = new Vector3[] { new(0f, 0f, -1f) };
+                }
             }
         }
 
         /// <summary>
         /// Data about a song from a <see cref="CustomSlideshow"/>.
         /// </summary>
-        public class SlideshowMusic{
-
+        public class SlideshowMusic
+        {
             /// <summary>
-            /// The file name of the sound to use. This comes from the 'StreamingAssets/music/songs' folder.
+            /// The file name of the sound to use. This comes from the `StreamingAssets/music/songs` folder.
             /// </summary>
             public string Name { get; set; }
 
             /// <summary>
-            /// The amount of time the sound will fade in for, until it is at full volume.
+            /// The duration of the song's fade in, in seconds.
             /// </summary>
             public float FadeIn { get; set; }
 
             /// <summary>
-            /// Creates data about a song to play from a JSON
+            /// Load information about a slideshow song from JSON data.
             /// </summary>
             /// <param name="json">The JSON data to load from.</param>
             public SlideshowMusic(JsonObject json)
             {
                 Name = json.GetString("name");
-                if (json.TryGet("fadein") is JsonAny fadeIn)
-                {
-                    FadeIn = fadeIn.AsFloat();
-                }
-                else
-                {
-                    FadeIn = 40f;
-                }
+                FadeIn = json.TryGet("fadein")?.AsFloat() ?? 40f;
             }
         }
     }

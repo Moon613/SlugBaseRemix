@@ -5,6 +5,7 @@ using System;
 using System.Linq;
 using System.IO;
 using static SlugBase.JsonUtils;
+using SlugBase.SaveData;
 
 namespace SlugBase.Assets
 {
@@ -12,31 +13,25 @@ namespace SlugBase.Assets
     /// A scene added by SlugBase.
     /// </summary>
     public class CustomScene
-    {        
-        /// <summary>
-        /// Set the dream scene that will display when the player hibernates next.
-        /// </summary>
-        /// <param name="name">The id of the scene to display.</param>
-        public static void QueueDream(string name)
-        {
-            if (RWCustom.Custom.rainWorld.processManager.currentMainLoop is RainWorldGame rainGame && CustomScene.Registry.TryGet(new(name), out var customScene))
-            {
-                rainGame.GetStorySession.saveState.dreamsState.InitiateEventDream(new (name));
-            }
-            else if (RWCustom.Custom.rainWorld.processManager.currentMainLoop is not RainWorldGame)
-            {
-                Debug.LogError("Slugbase dream set fail, curentMainLoop is not a RainWorldGame!");
-            }
-            else if (!CustomScene.Registry.TryGet(new(name), out var scene))
-            {
-                Debug.LogError("Slugbase dream set fail, could not find matching scene");
-            }
-        }
-
+    {
         /// <summary>
         /// Stores all registered <see cref="CustomScene"/>s.
         /// </summary>
         public static JsonRegistry<SceneID, CustomScene> Registry { get; } = new((key, json) => new(key, json));
+
+        /// <summary>
+        /// Set or unset the select menu scene override for a save state.
+        /// </summary>
+        /// <param name="save">The save state to modify.</param>
+        /// <param name="id">The new select menu scene ID, or <see langword="null"/> to remove the override.</param>
+        public static void SetSelectMenuScene(SaveState save, SceneID id)
+        {
+            var data = save.deathPersistentSaveData.GetSlugBaseData();
+            if (id == null)
+                data.RemoveInternal("SELECTSCENE");
+            else
+                data.SetInternal("SELECTSCENE", id.value);
+        }
 
         /// <summary>
         /// This scene's unique ID.
@@ -83,7 +78,7 @@ namespace SlugBase.Assets
         public float? SlugcatDepth { get; }
 
         /// <summary>
-        /// If a scene is used as a Dream, should it replace any current dream
+        /// If a scene is used as a dream, should it replace any current dream.
         /// </summary>
         public bool OverrideDream { get; }
 
@@ -95,10 +90,10 @@ namespace SlugBase.Assets
                 .Select(img => new Image(img.AsObject()))
                 .ToArray();
 
-            if (this is not SlugBase.Assets.CustomSlideshow.CustomSlideshowScene)
-            IdleDepths = json.GetList("idle_depths")
-                .Select(depth => depth.AsFloat())
-                .ToArray();
+            if (this is not CustomSlideshow.CustomSlideshowScene)
+                IdleDepths = json.GetList("idle_depths")
+                    .Select(depth => depth.AsFloat())
+                    .ToArray();
 
             SceneFolder = json.TryGet("scene_folder")?.AsString().Replace('/', Path.DirectorySeparatorChar);
 

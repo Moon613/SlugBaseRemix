@@ -17,7 +17,7 @@ using SlugBase.SaveData;
 
 namespace SlugBase
 {
-    [BepInPlugin("slime-cubed.slugbase", "SlugBase", "2.6.0")]
+    [BepInPlugin("slime-cubed.slugbase", "SlugBase", "2.7.0")]
     internal class SlugBasePlugin : BaseUnityPlugin
     {
         new internal static ManualLogSource Logger;
@@ -71,6 +71,7 @@ namespace SlugBase
                     AssetHooks.Apply();
                     FeatureHooks.Apply();
                     ExpeditionHooks.Apply();
+                    JollyCoopHooks.Apply();
                     SaveDataHooks.Apply();
 
                     SlugBaseCharacter.Registry.WatchForChanges = true;
@@ -87,8 +88,15 @@ namespace SlugBase
             {
                 orig(self);
 
-                ErrorList.Instance.ClearFileErrors();
-                ScanFiles();
+                try
+                {
+                    ErrorList.Instance.ClearFileErrors();
+                    ScanFiles();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
             };
         }
 
